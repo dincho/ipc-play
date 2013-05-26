@@ -29,8 +29,11 @@ void termination_handler(int signum);
 
 int main(int argc, const char * argv[])
 {
+    //global mutexes - writer is the owner
     data_ready = create_mutex(SEM_DATA_READY, 0);
     data_read = create_mutex(SEM_DATA_READ, 1);
+    
+    //global shared memory (data buffer)
     int *data = (int *) create_shm(SEG_KEY, &shmid);
     
     //handle CRTL-C

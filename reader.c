@@ -17,7 +17,7 @@
 /* GLOBAL VARIABLES SO WE CAN CLEANUP ON INTERUPT */
 
 int fd; //output file descriptor
-void *shm; //shared memory pointer
+int *data; //shared memory pointer
 int shmid_readers;
 sem_t *mutex;
 sem_t *data_ready;
@@ -34,14 +34,18 @@ int main(int argc, const char * argv[])
     //odd or even reader
     int even = parse_params(argc, argv);
 
-    /* SHARED SEGMENTS INITIALIZATION */
-    shm = get_shm(SEG_KEY);
-    int *cnt_readers = (int *) create_shm(SEG_KEY_READERS, &shmid_readers);
-    
-    /* SEMAPHORES INITIALIZATION */
+    //local (readers) mutex
     mutex = create_mutex(SEM_READERS_MUTEX, 1);
-    data_ready = get_mutex(SEM_DATA_READY);
-    data_read = get_mutex(SEM_DATA_READ);
+    
+    //not owned, but create the mutexes if the writer is not running
+    data_ready = create_mutex(SEM_DATA_READY, 0);
+    data_read = create_mutex(SEM_DATA_READ, 1);
+    
+    //global shared memory (data buffer)
+    data = (int *) create_shm(SEG_KEY, NULL);
+    
+    //local shared memory (between readers), used for turnstile
+    int *cnt_readers = (int *) create_shm(SEG_KEY_READERS, &shmid_readers);
 
     //handle CRTL-C
     signal(SIGINT, termination_handler);
@@ -60,7 +64,7 @@ int main(int argc, const char * argv[])
         sem_post(mutex);
         
         //critical section for readers
-        n = *((int *) shm);
+        n = *data;
         
         sem_wait(mutex);
             (*cnt_readers)--;
@@ -126,7 +130,7 @@ void cleanup()
 {    
     //not needed because shared mem is auto-detached on process exit
     //just for full scenario
-    detach_shm(shm);
+    detach_shm(data);
     
     //close named semaphore so resources can be freed
     sem_close(mutex);
