@@ -6,7 +6,13 @@
 //  Copyright (c) 2013 Dincho Todorov. All rights reserved.
 //
 
+#include <stdlib.h> //exit consants
+#include <string.h> //strcmp()
+#include <signal.h>
+#include <semaphore.h>
 #include "common.h"
+#include "trace.h"
+#include "ipc.h"
 
 /* GLOBAL VARIABLES SO WE CAN CLEANUP ON INTERUPT */
 
@@ -17,104 +23,33 @@ sem_t *mutex;
 sem_t *data_ready;
 sem_t *data_read;
 
+/* prototypes */
+int parse_params(int argc, const char * argv[]);
+int process_data(int even, int data);
 void cleanup();
 void termination_handler(int signum);
 
 int main(int argc, const char * argv[])
 {
     //odd or even reader
-    int even;
-    char *filename;
-    
-    if (argc > 1 && 0 == strcmp(argv[1], "even")) { //necheten
-        even = 1;
-        filename = "even.bin";
-    } else {
-        even = 0;
-        filename = "odd.bin";
-    }
-    
-    /* OUTPUT FILE INIT */
-    fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
-    if(fd == -1){
-        perror("open");
-        exit(EXIT_FAILURE);
-    }
+    int even = parse_params(argc, argv);
 
     /* SHARED SEGMENTS INITIALIZATION */
-    int shmid = shmget(SEG_KEY, sizeof(int), 0);
-    if (shmid == -1) {
-        perror("shmget failed"); //handle errno
-        if (ENOENT == errno) {
-            TRACE("%s", "shmget: you need to run writer first");
-        }
-        
-        exit(EXIT_FAILURE);
-    }
-    
-    TRACE("shmget: found segment with id: %d", shmid);
-    
-    /*
-     * Now we attach the segment to our data space.
-     */
-    shm = shmat(shmid, NULL, SHM_RND | SHM_RDONLY);
-    if (shm == (void *) -1) {
-        perror("shmat");
-        exit(EXIT_FAILURE);
-    }
-    
-    TRACE("shmat: attached at address: %p", shm);
-    
-    /*
-     * Get the segment. Error if does not exists.
-     */
-    shmid_readers = shmget(SEG_KEY_READERS, sizeof(int), IPC_CREAT | IPC_R | IPC_W);
-    if (shmid_readers == -1) {
-        perror("shmget failed"); //handle errno
-        exit(EXIT_FAILURE);
-    }
-    
-    TRACE("shmget: found segment with id: %d", shmid_readers);
-    
-    /*
-     * Now we attach the segment to our data space.
-     */
-    void *shm_readers = shmat(shmid_readers, NULL, 0);
-    if (shm_readers == (void *) -1) {
-        perror("shmat");
-        exit(EXIT_FAILURE);
-    }
-    
-    TRACE("shmat: attached at address: %p", shm_readers);
+    shm = get_shm(SEG_KEY);
+    int *cnt_readers = (int *) create_shm(SEG_KEY_READERS, &shmid_readers);
     
     /* SEMAPHORES INITIALIZATION */
-    
-    TRACE("sem_open: openning semaphore %s", SEM_READERS_MUTEX);
-    if((mutex = sem_open(SEM_READERS_MUTEX, O_CREAT, 0644, 1)) == SEM_FAILED) {
-        perror("sem_open failed"); //handle errno
-        exit(EXIT_FAILURE);
-    }
-    
-    TRACE("sem_open: openning semaphore %s", SEM_DATA_READY);
-    if((data_ready = sem_open(SEM_DATA_READY, 0)) == SEM_FAILED) {
-        perror("sem_open failed"); //handle errno
-        exit(EXIT_FAILURE);
-    }
-    
-    TRACE("sem_open: openning semaphore %s", SEM_DATA_READ);
-    if((data_read = sem_open(SEM_DATA_READ, 0)) == SEM_FAILED) {
-        perror("sem_open failed"); //handle errno
-        exit(EXIT_FAILURE);
-    }
-    
+    mutex = create_mutex(SEM_READERS_MUTEX, 1);
+    data_ready = get_mutex(SEM_DATA_READY);
+    data_read = get_mutex(SEM_DATA_READ);
+
+    //handle CRTL-C
     signal(SIGINT, termination_handler);
 
     /* MAIN LOOP */
     int n; //temp data storage
-    int *cnt_readers = (int *) shm_readers;
     
     TRACE("%s", "reading data...");
-    
     while (1) {
         sem_wait(mutex);
             (*cnt_readers)++;
@@ -135,19 +70,8 @@ int main(int argc, const char * argv[])
             }
         sem_post(mutex);
         
-        if (n == DATA_END) { //exit marker
+        if(0 == process_data(even, n)) {
             break;
-        }
-        
-        //work on the data
-        if ((even && !(n & 1))
-            || (!even && (n & 1))
-        ) {
-            ssize_t written = write(fd, &n, sizeof(n));
-            if (written != sizeof(n)) {
-                perror("write");
-                exit(EXIT_FAILURE);
-            }
         }
     }
     
@@ -156,22 +80,53 @@ int main(int argc, const char * argv[])
     return EXIT_SUCCESS;
 }
 
-void cleanup()
+int parse_params(int argc, const char * argv[])
 {
-    close(fd);
+    char *filename;
+    int even;
     
-    //not needed because shared mem is auto-detached on process exit
-    //just for full scenario
-    shmdt(shm);
-    TRACE("shmdt: dettached shared memory at address: %p", shm);
+    if (argc > 1 && 0 == strcmp(argv[1], "even")) { //necheten
+        even = 1;
+        filename = "even.bin";
+    } else {
+        even = 0;
+        filename = "odd.bin";
+    }
     
-    //deallocate readers segment
-    if (shmctl(shmid_readers, IPC_RMID, NULL) == -1) {
-        perror("shmctl IPC_RMID");
+    /* OUTPUT FILE INIT */
+    fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0644);
+    if(fd == -1){
+        perror("open");
         exit(EXIT_FAILURE);
     }
     
-    TRACE("shmctl: removed segment with id: %d", shmid_readers);
+    return even;
+}
+
+int process_data(int even, int data)
+{
+    if (data == DATA_END) { //exit marker
+        return 0;
+    }
+    
+    if ((even && !(data & 1))
+        || (!even && (data & 1))
+    ) {
+        ssize_t written = write(fd, &data, sizeof(data));
+        if (written != sizeof(data)) {
+            perror("write");
+            exit(EXIT_FAILURE);
+        }
+    }
+    
+    return 1;
+}
+
+void cleanup()
+{    
+    //not needed because shared mem is auto-detached on process exit
+    //just for full scenario
+    detach_shm(shm);
     
     //close named semaphore so resources can be freed
     sem_close(mutex);
@@ -180,6 +135,11 @@ void cleanup()
     sem_unlink(SEM_READERS_MUTEX);
     
     TRACE("%s", "sem_close: closed named semaphores");
+    
+    close(fd);
+    TRACE("closed fd: %d", fd);
+    
+    remove_shm(shmid_readers, 0);
 }
 
 void termination_handler(int signum)

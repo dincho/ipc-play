@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		5B485732172DA5170066178B /* writer.c in Sources */ = {isa = PBXBuildFile; fileRef = 5B485731172DA5170066178B /* writer.c */; };
 		5B48573F172DA51F0066178B /* reader.c in Sources */ = {isa = PBXBuildFile; fileRef = 5B48573E172DA51F0066178B /* reader.c */; };
+		5B5E991917523D9B00E7F301 /* ipc.c in Sources */ = {isa = PBXBuildFile; fileRef = 5B5E991817523D9B00E7F301 /* ipc.c */; };
+		5B5E991A17523D9B00E7F301 /* ipc.c in Sources */ = {isa = PBXBuildFile; fileRef = 5B5E991817523D9B00E7F301 /* ipc.c */; };
 		5B9C6CD51750B223001B946E /* run.sh in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5B9C6CD31750B19B001B946E /* run.sh */; };
 /* End PBXBuildFile section */
 
@@ -50,6 +52,9 @@
 		5B48573C172DA51F0066178B /* reader */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = reader; sourceTree = BUILT_PRODUCTS_DIR; };
 		5B48573E172DA51F0066178B /* reader.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = reader.c; sourceTree = "<group>"; };
 		5B485745172DAA000066178B /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
+		5B5E991717523D4E00E7F301 /* ipc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ipc.h; sourceTree = "<group>"; };
+		5B5E991817523D9B00E7F301 /* ipc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ipc.c; sourceTree = "<group>"; };
+		5B5E991B17523EBD00E7F301 /* trace.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = trace.h; sourceTree = "<group>"; };
 		5B9C6CD31750B19B001B946E /* run.sh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.sh; path = run.sh; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -74,6 +79,9 @@
 		5B9F6FE6172DA4F30020C93F = {
 			isa = PBXGroup;
 			children = (
+				5B5E991B17523EBD00E7F301 /* trace.h */,
+				5B5E991717523D4E00E7F301 /* ipc.h */,
+				5B5E991817523D9B00E7F301 /* ipc.c */,
 				5B19094B1751443E0047F2D0 /* Makefile */,
 				5B9C6CD31750B19B001B946E /* run.sh */,
 				5B485745172DAA000066178B /* common.h */,
@@ -163,6 +171,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5B485732172DA5170066178B /* writer.c in Sources */,
+				5B5E991917523D9B00E7F301 /* ipc.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -171,6 +180,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5B48573F172DA51F0066178B /* reader.c in Sources */,
+				5B5E991A17523D9B00E7F301 /* ipc.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

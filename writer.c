@@ -6,8 +6,15 @@
 //  Copyright (c) 2013 Dincho Todorov. All rights reserved.
 //
 
-#include "common.h"
+#include <stdlib.h> //exit
+#include <stdio.h> //perror
 #include <time.h>
+#include <unistd.h> //usleep
+#include <signal.h>
+#include <semaphore.h>
+#include "common.h"
+#include "trace.h"
+#include "ipc.h"
 
 /* GLOBAL VARIABLES SO WE CAN CLEANUP ON INTERUPT */
 
@@ -22,45 +29,15 @@ void termination_handler(int signum);
 
 int main(int argc, const char * argv[])
 {
-    if((data_ready = sem_open(SEM_DATA_READY, O_CREAT, 0644, 0)) == SEM_FAILED) {
-        perror("sem_open failed"); //handle errno
-        exit(EXIT_FAILURE);
-    }
-    
-    if((data_read = sem_open(SEM_DATA_READ, O_CREAT, 0644, 1)) == SEM_FAILED) {
-        perror("sem_open failed"); //handle errno
-        exit(EXIT_FAILURE);
-    }
-    
-    /*
-     * Create the shared segment. Error if already exists.
-     */
-    if ((shmid = shmget(SEG_KEY, sizeof(int), IPC_CREAT | IPC_EXCL | IPC_R | IPC_W)) == -1) {
-        perror("shmget failed"); //handle errno
-        exit(EXIT_FAILURE);
-    }
-    
-    TRACE("shmget: created segment with id: %d", shmid);
-    
-    /*
-     * Attach the segment to the data space.
-     */
-    void *shm = shmat(shmid, NULL, 0);
-    if (shm == (void *) -1) {
-        perror("shmat");
-        exit(EXIT_FAILURE);
-    }
-    
-    TRACE("shmat: attached at address: %p", shm);
+    data_ready = create_mutex(SEM_DATA_READY, 0);
+    data_read = create_mutex(SEM_DATA_READ, 1);
+    int *data = (int *) create_shm(SEG_KEY, &shmid);
     
     //handle CRTL-C
     signal(SIGINT, termination_handler);
     
     //seed the random generator
     srand((unsigned int)time(NULL));
-    
-    //cast shared memory to our data type
-    int *data = (int *) shm;
     
     TRACE("%s", "generating data: ");
     for(int i = 0; i < NB_ELEMENTS; i++) {
@@ -87,16 +64,9 @@ int main(int argc, const char * argv[])
     return EXIT_SUCCESS;
 }
 
-
 void cleanup()
 {
-    //deallocate the segment
-    if (shmctl(shmid, IPC_RMID, NULL) == -1) {
-        perror("shmctl IPC_RMID");
-        exit(EXIT_FAILURE);
-    }
-    
-    TRACE("shmctl: removed segment with id: %d", shmid);
+    remove_shm(shmid, 1);
     
     //The semaphore name is removed immediately.
     //The semaphore is destroyed once all other processes that have the semaphore open close it.
