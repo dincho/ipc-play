@@ -55,6 +55,7 @@
 		5B5E991717523D4E00E7F301 /* ipc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ipc.h; sourceTree = "<group>"; };
 		5B5E991817523D9B00E7F301 /* ipc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ipc.c; sourceTree = "<group>"; };
 		5B5E991B17523EBD00E7F301 /* trace.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = trace.h; sourceTree = "<group>"; };
+		5B5E991C1752532100E7F301 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = text; path = README.md; sourceTree = "<group>"; };
 		5B9C6CD31750B19B001B946E /* run.sh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.sh; path = run.sh; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -79,6 +80,7 @@
 		5B9F6FE6172DA4F30020C93F = {
 			isa = PBXGroup;
 			children = (
+				5B5E991C1752532100E7F301 /* README.md */,
 				5B5E991B17523EBD00E7F301 /* trace.h */,
 				5B5E991717523D4E00E7F301 /* ipc.h */,
 				5B5E991817523D9B00E7F301 /* ipc.c */,
